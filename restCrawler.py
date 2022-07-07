@@ -21,7 +21,7 @@ from pymongo import MongoClient
 dbName = "./setting.db"
 
 # サーチ文字列。記述方法はTwitterの/search/tweets に準ずる。
-query = '"(皮肉)" OR "（皮肉）"'
+query = '"すごい" -filter:retweets'
 
 # Consumer Key
 CK = "Uq3SgVG7m9FzVmawtjtVRl059"
@@ -37,10 +37,10 @@ hostName = "localhost"
 port = 27017
 
 # db名称
-m_dbName = "TwitterDB"
+m_dbName = "TwitterDB2"
 
 # collection名
-collection = "Tweet_data"
+collection = "Tweet_data2"
 
 ### メインのプログラム ###
 def main():
@@ -52,13 +52,17 @@ def main():
                        retry_delay =3,timeout = 70, wait_on_rate_limit=True)
 
     # MongoDB 認証関係処理(格納先DBとCollectionの指定)
-    # db_dst = MongoClient(hostName, port, username="test", password="test")[m_dbName][collection]
-    db_client = MongoClient(hostName, port, username="test", password="test")
-    exit()
+    # db_dst = MongoClient(hostName, port, username="test2", password="password")[m_dbName][collection]
+    # db_dst = MongoClient(hostName, port, username="test2", password="password")
+    # db_client = MongoClient(hostName, port, username="test2", password="password")
+    db_client = MongoClient(hostName, port)
+    db_db = db_client.m_dbName
+    db_col = db_db.collection
+    # exit()
     
-    db_db = db_client.database_names()
-    print(db_db)
-    db_col = db_db.collection_names()
+    # db_db = db_client.database_names()
+    # print(db_db)
+    # db_col = db_db.collection_names()
     # print()
     # db_dst.insert_one({"test":"text"})
 
@@ -83,7 +87,7 @@ def main():
     # 初回の実行
     result = TwAPI.search_tweets(q=query, result_type="recent", count=100, 
                           since_id=since_id, include_entities=True)
-
+    # print(result[1])
     if len(result):
         # 初回が取得できた場合、そのIDを記録(次回起動時のsince_idとなる)
         next_max_id = result[0].id
@@ -93,12 +97,19 @@ def main():
         conn.close()
         return -255
 
-    exit()
+    # exit()
+    num = 1
     for tweet in result:
         a = tweet._json
+        # print(a)
+        
+        # print(num)
         # print(a["text"])
+        num+=1
         # データを格納実施。
-        db_dst.insert_one(tweet._json)
+        # exit()
+        db_col.insert_one(a)
+        break
     # IDの最小(=次回の最大)を記録
     recent_max_id = result[-1].id -1
 
@@ -122,13 +133,13 @@ def main():
                     break
 
                 # データを格納実施。
-                db_dst.insert_one(tweet._json)
+                db_col.insert_one(tweet._json)
 
             recent_max_id = result[-1].id -1
 
         except HTTPException as exc:
             #tweepエラー発生時は、実施を巻き戻してエラー終了する。
-            db_dst.remove({'id' : { '$gt': since_id}})
+            db_col.remove({'id' : { '$gt': since_id}})
 
             return -255
         except KeyboardInterrupt:
