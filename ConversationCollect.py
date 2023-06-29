@@ -5,9 +5,11 @@ from pymongo import MongoClient
 import re
 
 # Twitter APIキー
-consumer_key = 'MMVLtfcVypbEEhHHcnfFn72mv'
-consumer_secret = '4UoBSidv4eNUI3zYlzhdHBQ7tF3hjTmjFr5SiqJzIXsyoXb3VN'
+API_key = 'MMVLtfcVypbEEhHHcnfFn72mv'
+API_secret = '4UoBSidv4eNUI3zYlzhdHBQ7tF3hjTmjFr5SiqJzIXsyoXb3VN'
 bearer_token = 'AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAA6P1vTv6%2Fv8C6jukgHu%2F3tjXC3%2FU%3DQgugmAazWmHiaTpZH3GbEoWQArxyReR7snc0Zn5oNIAQmYApuT'
+Access_Token = '3391900333-CeY3WUGIWgeBKnL7hLyj4Y9s4XGUShyS0lrQVIR'
+Access_Token_Secret = 'kOGmTwUMlONx5eviDG9gN1JQHCSghO0k4kH7pFWDi9WJF'
 
 # MongoDB接続情報
 mongodb_hostname = 'localhost'
@@ -16,8 +18,7 @@ mongodb_database = 'Conversation_sarcasm'
 mongodb_collection = '皮肉だよ'
 
 # Tweepyの認証
-auth = tweepy.AppAuthHandler(consumer_key, consumer_secret)
-api = tweepy.API(auth, wait_on_rate_limit=True)
+api = tweepy.Client(API_key, API_secret, bearer_token, Access_Token, Access_Token_Secret, wait_on_rate_limit=True)
 
 # MongoDBクライアントの作成
 client = MongoClient(mongodb_hostname, mongodb_port)
