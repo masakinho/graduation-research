@@ -5,10 +5,7 @@ from pymongo import MongoClient
 import re
 
 # Twitter APIキー
-consumer_key = 'MMVLtfcVypbEEhHHcnfFn72mv'
-consumer_secret = '4UoBSidv4eNUI3zYlzhdHBQ7tF3hjTmjFr5SiqJzIXsyoXb3VN'
-access_token = '3391900333-CeY3WUGIWgeBKnL7hLyj4Y9s4XGUShyS0lrQVIR'
-access_token_secret = 'kOGmTwUMlONx5eviDG9gN1JQHCSghO0k4kH7pFWDi9WJF'
+bearer_token = 'AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAA6P1vTv6%2Fv8C6jukgHu%2F3tjXC3%2FU%3DQgugmAazWmHiaTpZH3GbEoWQArxyReR7snc0Zn5oNIAQmYApuT'
 
 # MongoDB接続情報
 mongodb_hostname = 'localhost'
@@ -17,9 +14,8 @@ mongodb_database = 'Conversation_sarcasm'
 mongodb_collection = '皮肉だよ'
 
 # Tweepyの認証
-auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(access_token, access_token_secret)
-api = tweepy.API(auth)
+auth = tweepy.AppAuthHandler(bearer_token)
+api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
 # MongoDBクライアントの作成
 client = MongoClient(mongodb_hostname, mongodb_port)
@@ -29,38 +25,35 @@ collection = db[mongodb_collection]
 # 会話ツイートを収集してMongoDBに格納する関数
 def collect_and_store_conversation_tweets(keyword):
     # キーワードを含むツイートを検索
-    tweets = api.search_tweets(q=keyword, tweet_mode='extended')
+    tweets = api.search_all_tweets(query=keyword, tweet_fields='referenced_tweets', expansions='author_id', max_results=100)
     for tweet in tweets:
-        if not hasattr(tweet, 'in_reply_to_status_id_str'):
+        if not hasattr(tweet, 'referenced_tweets'):
             continue
         
-        conversation = api.get_status(tweet.in_reply_to_status_id_str, tweet_mode='extended')
+        conversation = api.get_tweet(tweet.referenced_tweets[0].id, tweet_fields='text,author_id')
         
         # 先頭のツイートが全てのリンクを含まず、リツイートではない場合のみ処理を続ける
-        if not contains_link(conversation.full_text) and not conversation.retweeted:
-            conversation_text = conversation.full_text
-            reply_text = remove_urls(tweet.full_text)
+        if not contains_link(conversation.text) and tweet.author_id != conversation.author_id:
+            conversation_text = conversation.text
+            reply_text = remove_urls(tweet.text)
             
             # テキストが空でない場合のみ、MongoDBに格納
             if conversation_text.strip() != '' and reply_text.strip() != '':
                 # ツイート情報を辞書形式に変換
                 tweet_data = {
-                    'tweet_id': tweet.id_str,
-                    'reply_id': tweet.in_reply_to_status_id_str,
                     'tweet_text': conversation_text,
                     'reply_text': reply_text
                 }
                 
                 # MongoDBに格納する前に、既に格納されていないか確認
-                if collection.count_documents({'tweet_id': tweet.id_str, 'reply_id': tweet.in_reply_to_status_id_str}) == 0:
+                if collection.count_documents(tweet_data) == 0:
                     # MongoDBに格納
                     collection.insert_one(tweet_data)
             
             # APIアクセス制限の考慮
-            remaining_calls = api.rate_limit_status()['resources']['search']['/search/tweets']['remaining']
-            if remaining_calls == 0:
-                reset_time = api.rate_limit_status()['resources']['search']['/search/tweets']['reset']
-                sleep_duration = reset_time - int(time.time()) + 5  # 念のため余裕を持たせる
+            if api.rate_limit_remaining() == 0:
+                reset_time = api.rate_limit_reset() - time.time()
+                sleep_duration = max(0, reset_time) + 5  # 念のため余裕を持たせる
                 print(f'API rate limit reached. Sleeping for {sleep_duration} seconds.')
                 time.sleep(sleep_duration)
 
@@ -74,3 +67,4 @@ def contains_link(text):
 
 # キーワードを指定して会話ツイートを収集し、MongoDBに格納
 collect_and_store_conversation_tweets('皮肉だよ')
+
