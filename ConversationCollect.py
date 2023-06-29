@@ -71,4 +71,4 @@ def contains_link(text):
     return re.search(r'http\S+|www\S+', text) is not None
 
 # キーワードを指定して会話ツイートを収集し、MongoDBに格納
-collect_and_store_conversation_tweets('キーワード')
+collect_and_store_conversation_tweets('皮肉だよ')
