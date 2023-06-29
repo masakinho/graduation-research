@@ -5,6 +5,8 @@ from pymongo import MongoClient
 import re
 
 # Twitter APIキー
+consumer_key = 'MMVLtfcVypbEEhHHcnfFn72mv'
+consumer_secret = '4UoBSidv4eNUI3zYlzhdHBQ7tF3hjTmjFr5SiqJzIXsyoXb3VN'
 bearer_token = 'AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAA6P1vTv6%2Fv8C6jukgHu%2F3tjXC3%2FU%3DQgugmAazWmHiaTpZH3GbEoWQArxyReR7snc0Zn5oNIAQmYApuT'
 
 # MongoDB接続情報
@@ -14,7 +16,7 @@ mongodb_database = 'Conversation_sarcasm'
 mongodb_collection = '皮肉だよ'
 
 # Tweepyの認証
-auth = tweepy.AppAuthHandler(bearer_token)
+auth = tweepy.AppAuthHandler(consumer_key, consumer_secret)
 api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
 # MongoDBクライアントの作成
@@ -27,13 +29,13 @@ def collect_and_store_conversation_tweets(keyword):
     # キーワードを含むツイートを検索
     tweets = api.search_all_tweets(query=keyword, tweet_fields='conversation_id', expansions='author_id', max_results=100)
     for tweet in tweets:
-        if not hasattr(tweet, 'conversation_id'):
+        if 'author_id' not in tweet:
             continue
         
         conversation = api.get_tweet(tweet.conversation_id, tweet_fields='author_id')
         
         # 先頭のツイートが全てのリンクを含まず、リツイートではない場合のみ処理を続ける
-        if not contains_link(conversation.text) and tweet.author_id != conversation.author_id:
+        if not contains_link(conversation.text) and not conversation.retweeted:
             conversation_text = conversation.text
             reply_text = remove_urls(tweet.text)
             
