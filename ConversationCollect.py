@@ -5,16 +5,16 @@ from pymongo import MongoClient
 import re
 
 # Twitter APIキー
-consumer_key = 'YOUR_CONSUMER_KEY'
-consumer_secret = 'YOUR_CONSUMER_SECRET'
-access_token = 'YOUR_ACCESS_TOKEN'
-access_token_secret = 'YOUR_ACCESS_TOKEN_SECRET'
+consumer_key = 'MMVLtfcVypbEEhHHcnfFn72mv'
+consumer_secret = '4UoBSidv4eNUI3zYlzhdHBQ7tF3hjTmjFr5SiqJzIXsyoXb3VN'
+access_token = '3391900333-CeY3WUGIWgeBKnL7hLyj4Y9s4XGUShyS0lrQVIR'
+access_token_secret = 'kOGmTwUMlONx5eviDG9gN1JQHCSghO0k4kH7pFWDi9WJF'
 
 # MongoDB接続情報
 mongodb_hostname = 'localhost'
 mongodb_port = 27017
-mongodb_database = 'TwitterDB2'
-mongodb_collection = 'c_面白いな'
+mongodb_database = 'Conversation_sarcasm'
+mongodb_collection = '皮肉だよ'
 
 # Tweepyの認証
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
@@ -45,12 +45,14 @@ def collect_and_store_conversation_tweets(keyword):
             if conversation_text.strip() != '' and reply_text.strip() != '':
                 # ツイート情報を辞書形式に変換
                 tweet_data = {
+                    'tweet_id': tweet.id_str,
+                    'reply_id': tweet.in_reply_to_status_id_str,
                     'tweet_text': conversation_text,
                     'reply_text': reply_text
                 }
                 
                 # MongoDBに格納する前に、既に格納されていないか確認
-                if collection.count_documents(tweet_data) == 0:
+                if collection.count_documents({'tweet_id': tweet.id_str, 'reply_id': tweet.in_reply_to_status_id_str}) == 0:
                     # MongoDBに格納
                     collection.insert_one(tweet_data)
             
