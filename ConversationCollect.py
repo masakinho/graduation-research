@@ -25,12 +25,12 @@ collection = db[mongodb_collection]
 # 会話ツイートを収集してMongoDBに格納する関数
 def collect_and_store_conversation_tweets(keyword):
     # キーワードを含むツイートを検索
-    tweets = api.search_all_tweets(query=keyword, tweet_fields='referenced_tweets', expansions='author_id', max_results=100)
+    tweets = api.search_all_tweets(query=keyword, tweet_fields='conversation_id', expansions='author_id', max_results=100)
     for tweet in tweets:
-        if not hasattr(tweet, 'referenced_tweets'):
+        if not hasattr(tweet, 'conversation_id'):
             continue
         
-        conversation = api.get_tweet(tweet.referenced_tweets[0].id, tweet_fields='text,author_id')
+        conversation = api.get_tweet(tweet.conversation_id, tweet_fields='author_id')
         
         # 先頭のツイートが全てのリンクを含まず、リツイートではない場合のみ処理を続ける
         if not contains_link(conversation.text) and tweet.author_id != conversation.author_id:
@@ -46,7 +46,7 @@ def collect_and_store_conversation_tweets(keyword):
                 }
                 
                 # MongoDBに格納する前に、既に格納されていないか確認
-                if collection.count_documents(tweet_data) == 0:
+                if not is_duplicate(tweet_data):
                     # MongoDBに格納
                     collection.insert_one(tweet_data)
             
@@ -65,6 +65,10 @@ def remove_urls(text):
 def contains_link(text):
     return re.search(r'http\S+|www\S+', text) is not None
 
+# 既に格納されているかどうかを判定する関数
+def is_duplicate(tweet_data):
+    query = {'$and': [{'tweet_text': tweet_data['tweet_text']}, {'reply_text': tweet_data['reply_text']}] }
+    return collection.count_documents(query) > 0
+
 # キーワードを指定して会話ツイートを収集し、MongoDBに格納
 collect_and_store_conversation_tweets('皮肉だよ')
-
