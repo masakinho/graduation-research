@@ -17,7 +17,7 @@ mongodb_collection = '皮肉だよ'
 
 # Tweepyの認証
 auth = tweepy.AppAuthHandler(consumer_key, consumer_secret)
-api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+api = tweepy.API(auth, wait_on_rate_limit=True)
 
 # MongoDBクライアントの作成
 client = MongoClient(mongodb_hostname, mongodb_port)
