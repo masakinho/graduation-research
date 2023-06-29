@@ -29,7 +29,7 @@ collection = db[mongodb_collection]
 # 会話ツイートを収集してMongoDBに格納する関数
 def collect_and_store_conversation_tweets(keyword):
     # キーワードを含むツイートを検索
-    tweets = tweepy.Cursor(api.search, q=keyword, tweet_mode='extended').items()
+    tweets = api.search_tweets(q=keyword, tweet_mode='extended')
     for tweet in tweets:
         if not hasattr(tweet, 'in_reply_to_status_id_str'):
             continue
