@@ -15,16 +15,16 @@ port = 27017
 m_dbName = "TwitterDB2"
 
 # collection名
-collection = "賢いね、な"
+collection = "(皮肉です)"
 
 # 発行したBearer tokenを指定する
-bearer_token = 'AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAUnOkgE8XrmMO5%2FZPwlxkNW7%2F7Rk%3DJ7KEHxQqBl1BP55slTO2Tk3auu8d6S8I6SRSw0B9tPy7GVzEpu'
+bearer_token = 'AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAQFDtSh3lkw1KFnFpPwsCD8fQErk%3DITmT3yjQNKGxGuPidUowBPWr9L9kbRg6qW5dd1wWB82cZ6Pc8J'
 
 # Twitter APIのURL
 search_url = "https://api.twitter.com/2/tweets/search/recent"
 
 # 検索クエリ
-query_params = {'query': '("かしこいね" OR "賢いね" OR "かしこいな" OR "賢いな")  -is:retweet -has:links -is:reply ',  'max_results': 100}
+query_params = {'query': '("皮肉です")  -is:retweet -has:links ',  'max_results': 100}
 
 def create_headers(bearer_token):
     headers = {"Authorization": "Bearer {}".format(bearer_token)}
@@ -46,7 +46,7 @@ def connect_to_endpoint(search_url, headers, params):
         print('Rate limit remaining: ' + rate_limit)
 
         c = c + 1
-        has_next = ('next_token' in response_body['meta'].keys() and c < 10)
+        has_next = ('next_token' in response_body['meta'].keys() and c < 1)
 
         # next_tokenがある場合は検索クエリに追加
         if has_next:
