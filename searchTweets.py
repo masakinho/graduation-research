@@ -15,7 +15,7 @@ port = 27017
 m_dbName = "TwitterDB2"
 
 # collection名
-collection = "(皮肉です)"
+collection = "(皮肉ですzo)"
 
 # 発行したBearer tokenを指定する
 bearer_token = 'AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAQFDtSh3lkw1KFnFpPwsCD8fQErk%3DITmT3yjQNKGxGuPidUowBPWr9L9kbRg6qW5dd1wWB82cZ6Pc8J'
@@ -24,7 +24,7 @@ bearer_token = 'AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAQFDtSh3lkw1KFnFpPwsCD8fQErk%3DIT
 search_url = "https://api.twitter.com/2/tweets/search/recent"
 
 # 検索クエリ
-query_params = {'query': '("皮肉です")  -is:retweet -has:links ',  'max_results': 100}
+query_params = {'query': '("皮肉です")  -is:retweet -has:links ',  'max_results': 100, 'tweet.fields': 'conversation_id'}
 
 def create_headers(bearer_token):
     headers = {"Authorization": "Bearer {}".format(bearer_token)}
@@ -40,6 +40,8 @@ def connect_to_endpoint(search_url, headers, params):
             raise Exception(response.status_code, response.text)
 
         response_body = response.json()
+        print(response_body)
+        print(response_body['data'])
         result += response_body['data']
         
         rate_limit = response.headers['x-rate-limit-remaining']
