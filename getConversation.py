@@ -14,7 +14,7 @@ hostName = "localhost"
 port = 27017
 
 # db名称
-m_dbName = "TwitterDB3"
+m_dbName = "皮肉です_3"
 
 
 
@@ -101,13 +101,28 @@ def main():
     db_db = db_client[m_dbName]
     # db_col = db_db[collection]
 
-    list = [1699000801375781318,
-  1699002087215071584,
-  1698896919828042137,
-  1698992999768949110,
-  1698619716754145460,
-  1698974410450018745,
-  1698936998122390006]
+    list = [
+  1723929116884255141,
+  1723914083823710583,
+  1723872307007868954,
+  1723786470555836679,
+  1723750182695928113,
+  1723502626602647973,
+  1723663487841530008,
+  1723635113278464267,
+  1723541606274601075,
+  1723519319290830922,
+  1723290504278991337,
+  1723284778215260428,
+  1723194605812990020,
+  1723188104369225749,
+  1722918267306832085,
+  1721796265254817925,
+  1722381286692757811,
+  1722929010890719742,
+  1722832113068896643,
+  1722482221800685774
+  ]
     
     filename = "saved_number.txt"
     try:
@@ -116,21 +131,30 @@ def main():
             num = int(file.read())
     except FileNotFoundError:
         # ファイルが存在しない場合、初期値を設定
-        num = 1000
+        num = 10000000
     
-    for id in list:
-        # collection名
-        collection = "会話_{}".format(num)
-        db_col = db_db[collection]
-        url = create_url(id)
-        json_response = connect_to_endpoint(url)
-        db_col.insert_many(json_response)
-        # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
-        num += 1
+    try:
+        for id in list:
+            # collection名
+            collection = "会話_{}".format(num)
+            db_col = db_db[collection]
+            url = create_url(id)
+            json_response = connect_to_endpoint(url)
+            db_col.insert_many(json_response)
+            # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
+            num += 1
 
-    # 計算結果をファイルに保存
-    with open(filename, "w") as file:
-        file.write(str(num))
+        # 計算結果をファイルに保存
+        with open(filename, "w") as file:
+            file.write(str(num))
+    except Exception as e:
+        # エラーが発生した場合、前回の値を使用する
+        print(f"エラーが発生しました: {e}")
+        print(f"エラーidは {id} です")
+        print("現在、会話", num-1, "まで取得済み")
+        print("次、会話", num, "からスタート")
+        with open(filename, "w") as file:
+            file.write(str(num))
 
     print("現在、会話", num-1, "まで取得済み")
     print("次、会話", num, "からスタート")

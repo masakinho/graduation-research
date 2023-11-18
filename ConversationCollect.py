@@ -115,7 +115,7 @@ search_url = "https://api.twitter.com/2/tweets/search/recent"
 # lookup_url = "https://api.twitter.com/2/tweets"
 
 # 検索クエリ
-query_params = {'query': '"(""皮肉だよ"")"  -is:retweet -has:links ',  'max_results': 100, 'tweet.fields': 'conversation_id,in_reply_to_user_id'}
+query_params = {'query': '"皮肉です"  -が皮肉 -は皮肉 -の皮肉 -て皮肉 -いう皮肉 -も皮肉 -is:retweet -has:links ', 'max_results': 100, 'tweet.fields': 'conversation_id,in_reply_to_user_id'}
 
 
 def create_headers(bearer_token):
@@ -152,8 +152,16 @@ def connect_to_endpoint_recent(search_url, headers, params):
         # print(response_data)
         # result += response_body['data']
         
+
         response_con = collect_data_with_key(response_body, 'in_reply_to_user_id')
         print(response_con['data'])
+
+        # JSONデータ内のテキストフィールドのUnicodeエスケープシーケンスを削除、'text'フィールドの処理
+        # for item in response_con['data']:
+        #     if 'text' in item:
+        #         # item['text'] = remove_unicode_escape_sequences(item['text'])
+        #         item['text'] = convert_quotes_and_escape(item['text'])
+
         result += response_con['data']
 
         rate_limit = response.headers['x-rate-limit-remaining']
@@ -195,6 +203,14 @@ def collect_data_with_key(data, target_key):
         if target_key in item:
             new_data["data"].append(item)
     return new_data
+
+# Unicodeエスケープシーケンスを削除する関数
+# def remove_unicode_escape_sequences(input_str):
+#     return input_str.encode('utf-8').decode('unicode_escape')
+
+# シングルクォートをダブルクォートに変換し、ダブルクォートをエスケープする関数
+def convert_quotes_and_escape(input_str):
+    return input_str.replace("'", '"').replace('"', r'\"').replace('\n', '\\n')
 
 def main():
     db_client = MongoClient(hostName, port)
