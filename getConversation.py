@@ -14,7 +14,7 @@ hostName = "localhost"
 port = 27017
 
 # db名称
-m_dbName = "皮肉です_3"
+m_dbName = "皮肉だよ_5"
 
 
 
@@ -23,13 +23,14 @@ m_dbName = "皮肉です_3"
 bearer_token = "AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAQFDtSh3lkw1KFnFpPwsCD8fQErk%3DITmT3yjQNKGxGuPidUowBPWr9L9kbRg6qW5dd1wWB82cZ6Pc8J"
 
 
-def create_url(con_id):
+def create_url(con_id, id):
     tweet_fields = "tweet.fields=author_id,in_reply_to_user_id,conversation_id,referenced_tweets"
     query = "query=conversation_id:{}".format(con_id)
     max_results = "max_results=100"
+    until_id = "until_id:{}".format(id)
     # You can adjust ids to include a single Tweets.
     # Or you can add to up to 100 comma-separated IDs
-    url = "https://api.twitter.com/2/tweets/search/recent?{}&{}&{}".format(query, max_results, tweet_fields)
+    url = "https://api.twitter.com/2/tweets/search/recent?{}&{}&{}&{}".format(query, max_results, tweet_fields, until_id)
     return url
 
 
@@ -102,26 +103,58 @@ def main():
     # db_col = db_db[collection]
 
     list = [
-  1723929116884255141,
-  1723914083823710583,
-  1723872307007868954,
-  1723786470555836679,
-  1723750182695928113,
-  1723502626602647973,
-  1723663487841530008,
-  1723635113278464267,
-  1723541606274601075,
-  1723519319290830922,
-  1723290504278991337,
-  1723284778215260428,
-  1723194605812990020,
-  1723188104369225749,
-  1722918267306832085,
-  1721796265254817925,
-  1722381286692757811,
-  1722929010890719742,
-  1722832113068896643,
-  1722482221800685774
+  1726213721650004388,
+  1726457549405479402,
+  1726453978958115024,
+  1726462418157793585,
+  1726365077761388820,
+  1726242883513332044,
+  1726207451329081824,
+  1726418207827992668,
+  1726395009363218713,
+  1725720155727298891,
+  1726079343150104996,
+  1726036413928595632,
+  1726305788036284505,
+  1726258298985554222,
+  1726257818922307976,
+  1726232668915032230,
+  1726001646357164157,
+  1725899104478462140,
+  1726207932365492264,
+  1726189076213379307,
+  1726192315990200331,
+  1726182750347252048,
+  1726174207711863246,
+  1726149410021900521,
+  1726089943926423677,
+  1726060229237068096,
+  1726025287958479049,
+  1726032375908540457,
+  1726086791969775780,
+  1725779848512299305,
+  1726080276638626092,
+  1725833596366450972,
+  1725809817095397492,
+  1725856982165590403,
+  1726067139583549524,
+  1725880844735451301,
+  1725880844735451301,
+  1725424330719560060,
+  1726050396693766653,
+  1725652091941871966,
+  1726034329703477305,
+  1725756648726347789,
+  1726020082130997412,
+  1725835075848425472,
+  1725774706069118977,
+  1725878298071502964,
+  1725764684572467542,
+  1725823639361319412,
+  1725542971242873048,
+  1725848990451675272,
+  1725849252566552902
+
   ]
     
     filename = "saved_number.txt"
@@ -134,11 +167,21 @@ def main():
         num = 10000000
     
     try:
-        for id in list:
+        # for id in list:
+        #     # collection名
+        #     collection = "会話_{}".format(num)
+        #     db_col = db_db[collection]
+        #     url = create_url(id)
+        #     json_response = connect_to_endpoint(url)
+        #     db_col.insert_many(json_response)
+        #     # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
+        #     num += 1
+        for row in list:
+            con_id, id_value = row  # 二次元配列の各行から要素を取得
             # collection名
             collection = "会話_{}".format(num)
             db_col = db_db[collection]
-            url = create_url(id)
+            url = create_url(con_id, id_value)  # create_url()の引数を変更
             json_response = connect_to_endpoint(url)
             db_col.insert_many(json_response)
             # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
@@ -150,7 +193,7 @@ def main():
     except Exception as e:
         # エラーが発生した場合、前回の値を使用する
         print(f"エラーが発生しました: {e}")
-        print(f"エラーidは {id} です")
+        print(f"エラー会話idは {con_id} です")
         print("現在、会話", num-1, "まで取得済み")
         print("次、会話", num, "からスタート")
         with open(filename, "w") as file:
