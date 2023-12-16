@@ -115,7 +115,7 @@ search_url = "https://api.twitter.com/2/tweets/search/recent"
 # lookup_url = "https://api.twitter.com/2/tweets"
 
 # 検索クエリ
-query_params = {'query': '"皮肉だよ"  -が皮肉 -は皮肉 -の皮肉 -て皮肉 -いう皮肉 -も皮肉 -is:retweet -has:links ', 'max_results': 100, 'tweet.fields': 'conversation_id,in_reply_to_user_id,author_id'}
+query_params = {'query': '"皮肉だよ"  -が皮肉 -は皮肉 -の皮肉 -て皮肉 -いう皮肉 -も皮肉 -is:retweet -has:links ', 'until_id': '1732979468946506120',  'max_results': 100, 'tweet.fields': 'conversation_id,in_reply_to_user_id,author_id'}
 
 
 def create_headers(bearer_token):
