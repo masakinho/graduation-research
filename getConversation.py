@@ -14,7 +14,7 @@ hostName = "localhost"
 port = 27017
 
 # db名称
-m_dbName = "皮肉だよ_5"
+m_dbName = "皮肉です_5"
 
 
 
@@ -23,7 +23,7 @@ m_dbName = "皮肉だよ_5"
 bearer_token = "AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAQFDtSh3lkw1KFnFpPwsCD8fQErk%3DITmT3yjQNKGxGuPidUowBPWr9L9kbRg6qW5dd1wWB82cZ6Pc8J"
 
 
-def create_url(id, con_id):
+def create_url(con_id, id):
     tweet_fields = "tweet.fields=author_id,in_reply_to_user_id,conversation_id,referenced_tweets"
     query = "query=conversation_id:{}".format(con_id)
     max_results = "max_results=100"
@@ -103,7 +103,10 @@ def main():
     # db_col = db_db[collection]
 
     list = [
-    
+    [
+        "1736200305061380482",
+        "1736276106280567227"
+    ]
   ]
     
     filename = "saved_number.txt"
@@ -126,12 +129,12 @@ def main():
         #     # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
         #     num += 1
         for row in list:
-            id_value, con_id = map(int, row)  # 二次元配列の各行から要素を取得し、intに変換
+            con_id, id_value= map(int, row)  # 二次元配列の各行から要素を取得し、intに変換
             id_value += 1  # id_valueに+1（+1しないとキーワードを含むツイートが会話に含まれない）
             # collection名
             collection = "会話_{}".format(num)
             db_col = db_db[collection]
-            url = create_url(id_value, con_id)  # create_url()の引数を変更
+            url = create_url(con_id, id_value)  # create_url()の引数を変更
             json_response = connect_to_endpoint(url)
             db_col.insert_many(json_response)
             # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
