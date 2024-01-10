@@ -65,9 +65,16 @@ model = SarcasmClassifier().to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
 
-# データの読み込み
-csv_file_path = "your_dataset.csv"  # ファイルパスを適切に設定
-df = pd.read_csv(csv_file_path)
+# 正例のデータセット読み込み
+csv_file_path_positive = "path/to/positive_dataset.csv"
+df_positive = pd.read_csv(csv_file_path_positive)
+
+# 負例のデータセット読み込み
+csv_file_path_negative = "path/to/negative_dataset.csv"
+df_negative = pd.read_csv(csv_file_path_negative)
+
+# 正例と負例のデータフレームを連結
+df = pd.concat([df_positive, df_negative], ignore_index=True)
 
 # BERTトークナイザーのロード
 tokenizer = BertTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-whole-word-masking")
@@ -76,7 +83,7 @@ tokenizer = BertTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-whole-wo
 dataset = ConversationDataset(df, tokenizer)
 
 # 訓練データとテストデータに分割
-train_data, test_data = train_test_split(dataset, test_size=0.2, random_state=42)
+train_data, test_data = train_test_split(dataset, test_size=0.2, random_state=42, stratify=df["label"])
 
 # データローダーの作成
 batch_size = 8
@@ -132,3 +139,4 @@ print(f"Test Accuracy: {accuracy:.4f}")
 print(f"Precision: {precision:.4f}")
 print(f"Recall: {recall:.4f}")
 print(f"F1 Score: {f1:.4f}")
+ 
