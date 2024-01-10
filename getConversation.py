@@ -14,7 +14,7 @@ hostName = "localhost"
 port = 27017
 
 # db名称
-m_dbName = "TwitterDB3"
+m_dbName = "皮肉です_5"
 
 
 
@@ -23,13 +23,14 @@ m_dbName = "TwitterDB3"
 bearer_token = "AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAQFDtSh3lkw1KFnFpPwsCD8fQErk%3DITmT3yjQNKGxGuPidUowBPWr9L9kbRg6qW5dd1wWB82cZ6Pc8J"
 
 
-def create_url(con_id):
+def create_url(con_id, id):
     tweet_fields = "tweet.fields=author_id,in_reply_to_user_id,conversation_id,referenced_tweets"
     query = "query=conversation_id:{}".format(con_id)
     max_results = "max_results=100"
+    until_id = "until_id={}".format(id)
     # You can adjust ids to include a single Tweets.
     # Or you can add to up to 100 comma-separated IDs
-    url = "https://api.twitter.com/2/tweets/search/recent?{}&{}&{}".format(query, max_results, tweet_fields)
+    url = "https://api.twitter.com/2/tweets/search/recent?{}&{}&{}&{}".format(query, max_results, tweet_fields, until_id)
     return url
 
 
@@ -101,13 +102,12 @@ def main():
     db_db = db_client[m_dbName]
     # db_col = db_db[collection]
 
-    list = [1699000801375781318,
-  1699002087215071584,
-  1698896919828042137,
-  1698992999768949110,
-  1698619716754145460,
-  1698974410450018745,
-  1698936998122390006]
+    list = [
+    [
+        "1736200305061380482",
+        "1736276106280567227"
+    ]
+  ]
     
     filename = "saved_number.txt"
     try:
@@ -116,21 +116,41 @@ def main():
             num = int(file.read())
     except FileNotFoundError:
         # ファイルが存在しない場合、初期値を設定
-        num = 1000
+        num = 10000000
     
-    for id in list:
-        # collection名
-        collection = "会話_{}".format(num)
-        db_col = db_db[collection]
-        url = create_url(id)
-        json_response = connect_to_endpoint(url)
-        db_col.insert_many(json_response)
-        # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
-        num += 1
+    try:
+        # for id in list:
+        #     # collection名
+        #     collection = "会話_{}".format(num)
+        #     db_col = db_db[collection]
+        #     url = create_url(id)
+        #     json_response = connect_to_endpoint(url)
+        #     db_col.insert_many(json_response)
+        #     # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
+        #     num += 1
+        for row in list:
+            con_id, id_value= map(int, row)  # 二次元配列の各行から要素を取得し、intに変換
+            id_value += 1  # id_valueに+1（+1しないとキーワードを含むツイートが会話に含まれない）
+            # collection名
+            collection = "会話_{}".format(num)
+            db_col = db_db[collection]
+            url = create_url(con_id, id_value)  # create_url()の引数を変更
+            json_response = connect_to_endpoint(url)
+            db_col.insert_many(json_response)
+            # print(json.dumps(json_response, indent=4, sort_keys=True, ensure_ascii=False))
+            num += 1
 
-    # 計算結果をファイルに保存
-    with open(filename, "w") as file:
-        file.write(str(num))
+        # 計算結果をファイルに保存
+        with open(filename, "w") as file:
+            file.write(str(num))
+    except Exception as e:
+        # エラーが発生した場合、前回の値を使用する
+        print(f"エラーが発生しました: {e}")
+        print(f"エラー会話idは {con_id} です")
+        print("現在、会話", num-1, "まで取得済み")
+        print("次、会話", num, "からスタート")
+        with open(filename, "w") as file:
+            file.write(str(num))
 
     print("現在、会話", num-1, "まで取得済み")
     print("次、会話", num, "からスタート")
