@@ -1,134 +1,124 @@
-import torch
-import torch.nn as nn
-from transformers import BertTokenizer, BertForSequenceClassification
-from torch.utils.data import Dataset, DataLoader
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import pandas as pd
-from tqdm import tqdm
-from torch.utils.data.dataset import random_split
+import torch
+from torch.utils.data import Dataset, DataLoader
+from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import AdamW
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.model_selection import train_test_split
 
-# デバイスの設定
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# BERTモデルのロード
-class BinaryClassifier(nn.Module):
-    def __init__(self, num_classes=2):
-        super(BinaryClassifier, self).__init__()
-        self.bert = BertForSequenceClassification.from_pretrained("cl-tohoku/bert-base-japanese-whole-word-masking", num_labels=num_classes)
-
-    def forward(self, input_ids, attention_mask):
-        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
-        return outputs.logits
-
-# データセットクラス
-class BinaryClassificationDataset(Dataset):
-    def __init__(self, data, tokenizer, max_len=128):
+# データセットクラスの定義
+class TextDataset(Dataset):
+    def __init__(self, dataframe, tokenizer, max_len):
+        self.data = dataframe
+        self.text = self.data.text
+        self.labels = self.data.label
         self.tokenizer = tokenizer
         self.max_len = max_len
-        self.data = data
 
     def __len__(self):
-        return len(self.data)
+        return len(self.text)
 
     def __getitem__(self, idx):
-        utterance = self.data.loc[idx, "text"]
-        label = self.data.loc[idx, "label"]
+        text = str(self.text[idx])
+        labels = int(self.labels[idx])
 
-        input_dict = self.tokenizer(
-            utterance,
+        encoding = self.tokenizer.encode_plus(
+            text,
+            add_special_tokens=True,
             max_length=self.max_len,
-            padding="max_length",
-            truncation=True,
-            return_tensors="pt",
+            return_token_type_ids=False,
+            padding='max_length',  # この行を確認
+            truncation=True,       # この行を追加
+            return_attention_mask=True,
+            return_tensors='pt',
         )
-        # 修正: ラベルが1（言語的皮肉）または0（状況的皮肉）の場合にのみ損失を計算
-        if label == 1 or label == 0:
-            input_dict["labels"] = torch.tensor(label)
-        else:
-            input_dict["labels"] = torch.tensor(-100)  # ラベルが無効な場合は-100を指定
 
-        return input_dict, label
+        return {
+            'text': text,
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
+            'labels': torch.tensor(labels, dtype=torch.long)
+        }
 
-# モデルの初期化
-model = BinaryClassifier().to(device)
+# パラメータ設定
+MAX_LEN = 128
+BATCH_SIZE = 16
+EPOCHS = 3
 
-# 損失関数と最適化関数の設定
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+# トークナイザーとモデルの初期化
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased')
 
-# 正例のデータセット読み込み
-csv_file_path_positive = "/home/ishi0826/Downloads/newpos.csv"
-df_positive = pd.read_csv(csv_file_path_positive)
+# データセットの準備
+# CSVファイルを読み込む
+pos_data = pd.read_csv('/home/ishi0826/Templates/graduation-research/pst.csv')
+neg_data = pd.read_csv('/home/ishi0826/Templates/graduation-research/ngt.csv')
 
-# 負例のデータセット読み込み
-csv_file_path_negative = "/home/ishi0826/Downloads/newneg.csv"
-df_negative = pd.read_csv(csv_file_path_negative)
+# テキスト中の '\n' を改行文字に置換
+pos_data['text'] = pos_data['text'].replace(r'\\n', '\n', regex=True)
+neg_data['text'] = neg_data['text'].replace(r'\\n', '\n', regex=True)
 
-# 正例と負例のデータフレームを連結
-df = pd.concat([df_positive, df_negative], ignore_index=True)
+data = pd.concat([pos_data, neg_data])
 
-# BERTトークナイザーのロード
-tokenizer = BertTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-whole-word-masking")
+# 訓練データセットとバリデーションデータセットに分割
+train_data, val_data = train_test_split(data, test_size=0.2)
+train_data = train_data.reset_index(drop=True)  # インデックスをリセット
+val_data = val_data.reset_index(drop=True)      # インデックスをリセット
 
-# データセットの作成
-dataset = BinaryClassificationDataset(df, tokenizer)
+# データセットの準備
+train_dataset = TextDataset(train_data, tokenizer, MAX_LEN)
+val_dataset = TextDataset(val_data, tokenizer, MAX_LEN)
 
-# データセットを訓練データとテストデータに手動で分割
-total_samples = len(dataset)
-train_size = int(0.8 * total_samples)
-test_size = total_samples - train_size
-train_data, test_data = random_split(dataset, [train_size, test_size])
+# データローダーの設定
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
 
-# データローダーの作成
-batch_size = 8
-train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+# オプティマイザーの設定
+optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 
-# 学習
-num_epochs = 3
-for epoch in range(num_epochs):
+# 訓練ループ
+for epoch in range(EPOCHS):
     model.train()
-    total_loss = 0
-    for batch in tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}"):
-        inputs, labels = batch
-        input_ids = inputs["input_ids"].squeeze(dim=1).to(device)
-        attention_mask = inputs["attention_mask"].squeeze(dim=1).to(device)
-        labels = labels.to(device)
-
+    for batch in train_loader:
         optimizer.zero_grad()
-        outputs = model(input_ids, attention_mask)
-        loss = criterion(outputs, labels)
+        input_ids = batch['input_ids']
+        attention_mask = batch['attention_mask']
+        labels = batch['labels']
+        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+        loss = outputs.loss
         loss.backward()
         optimizer.step()
-        total_loss += loss.item()
 
-    average_loss = total_loss / len(train_dataloader)
-    print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {average_loss:.4f}")
+def evaluate(model, data_loader):
+    model.eval()
+    predictions, true_labels, misclassified_samples = [], [], []
+    with torch.no_grad():
+        for batch in data_loader:
+            input_ids = batch['input_ids']
+            attention_mask = batch['attention_mask']
+            labels = batch['labels']
+            texts = batch['text']
+            outputs = model(input_ids, attention_mask=attention_mask)
+            logits = outputs.logits
+            batch_predictions = torch.argmax(logits, dim=1).tolist()
+            predictions.extend(batch_predictions)
+            true_labels.extend(labels.tolist())
 
-# テスト
-model.eval()
-all_labels = []
-all_preds = []
+            # 誤分類されたサンプルを特定
+            for text, true_label, pred_label in zip(texts, labels, batch_predictions):
+                if true_label != pred_label:
+                    misclassified_samples.append((text, true_label, pred_label))
 
-with torch.no_grad():
-    for batch in tqdm(test_dataloader, desc="Testing"):
-        inputs, labels = batch
-        input_ids = inputs["input_ids"].squeeze(dim=1).to(device)
-        attention_mask = inputs["attention_mask"].squeeze(dim=1).to(device)
-        labels = labels.to(device)
+    accuracy = accuracy_score(true_labels, predictions)
+    precision, recall, f1, _ = precision_recall_fscore_support(true_labels, predictions, average='binary')
+    return accuracy, precision, recall, f1, misclassified_samples
 
-        outputs = model(input_ids, attention_mask)
-        _, predicted = torch.max(outputs, 1)
+# 評価指標と誤分類されたサンプルの計算
+accuracy, precision, recall, f1, misclassified_samples = evaluate(model, val_loader)
+print(f'Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1 Score: {f1}')
 
-        all_labels.extend(labels.cpu().numpy())
-        all_preds.extend(predicted.cpu().numpy())
+# 誤分類されたサンプルを表示
+print("\n誤分類されたサンプル:")
+for sample in misclassified_samples:
+    print(f'Text: {sample[0]}, True Label: {sample[1]}, Predicted Label: {sample[2]}')
 
-# 評価メトリクスの計算
-accuracy = accuracy_score(all_labels, all_preds)
-precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average="binary")
-
-print(f"Test Accuracy: {accuracy:.4f}")
-print(f"Precision: {precision:.4f}")
-print(f"Recall: {recall:.4f}")
-print(f"F1 Score: {f1:.4f}")
