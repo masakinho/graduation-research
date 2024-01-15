@@ -41,22 +41,25 @@ class TextDataset(Dataset):
         }
 
 # パラメータ設定
-MAX_LEN = 128
-BATCH_SIZE = 16
+MAX_LEN = 256
+BATCH_SIZE = 8
 EPOCHS = 3
 
 # トークナイザーとモデルの初期化
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased')
+tokenizer = BertTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-v3')
+model = BertForSequenceClassification.from_pretrained('cl-tohoku/bert-base-japanese-v3')
+
 
 # データセットの準備
 # CSVファイルを読み込む
 pos_data = pd.read_csv('/home/ishi0826/Templates/graduation-research/pst.csv')
 neg_data = pd.read_csv('/home/ishi0826/Templates/graduation-research/ngt.csv')
+test_data = pd.read_csv('/home/ishi0826/Templates/graduation-research/test.csv')
 
 # テキスト中の '\n' を改行文字に置換
 pos_data['text'] = pos_data['text'].replace(r'\\n', '\n', regex=True)
 neg_data['text'] = neg_data['text'].replace(r'\\n', '\n', regex=True)
+test_data['text'] = test_data['text'].replace(r'\\n', '\n', regex=True)
 
 data = pd.concat([pos_data, neg_data])
 
@@ -68,10 +71,12 @@ val_data = val_data.reset_index(drop=True)      # インデックスをリセッ
 # データセットの準備
 train_dataset = TextDataset(train_data, tokenizer, MAX_LEN)
 val_dataset = TextDataset(val_data, tokenizer, MAX_LEN)
+test_dataset = TextDataset(test_data, tokenizer, MAX_LEN)
 
 # データローダーの設定
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
+test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 # オプティマイザーの設定
 optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
@@ -79,46 +84,78 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 # 訓練ループ
 for epoch in range(EPOCHS):
     model.train()
+    total_train_loss = 0
+
     for batch in train_loader:
         optimizer.zero_grad()
         input_ids = batch['input_ids']
         attention_mask = batch['attention_mask']
         labels = batch['labels']
         outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+        
         loss = outputs.loss
+        total_train_loss += loss.item()
         loss.backward()
         optimizer.step()
 
-def evaluate(model, data_loader):
+    # 平均訓練ロスを計算
+    avg_train_loss = total_train_loss / len(train_loader)
+
+    # 検証フェーズ
     model.eval()
-    predictions, true_labels, misclassified_samples = [], [], []
+    total_val_loss = 0
+    predictions, true_labels = [], []
+
+    with torch.no_grad():
+        for batch in val_loader:
+            input_ids = batch['input_ids']
+            attention_mask = batch['attention_mask']
+            labels = batch['labels']
+
+            outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+            loss = outputs.loss
+            total_val_loss += loss.item()
+
+            logits = outputs.logits
+            batch_predictions = torch.argmax(logits, dim=1).tolist()
+            predictions.extend(batch_predictions)
+            true_labels.extend(labels.tolist())
+
+    # 平均検証ロスを計算
+    avg_val_loss = total_val_loss / len(val_loader)
+
+    # 評価指標を計算
+    accuracy = accuracy_score(true_labels, predictions)
+    precision, recall, f1, _ = precision_recall_fscore_support(true_labels, predictions, average='binary')
+
+    # 結果を表示
+    print(f'Epoch {epoch + 1}/{EPOCHS}')
+    print(f'Training Loss: {avg_train_loss:.3f}')
+    print(f'Validation Loss: {avg_val_loss:.3f}')
+    print(f'Accuracy: {accuracy:.3f}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {f1:.3f}')
+    print('---------------------------')
+
+    # テストフェーズ
+def evaluate_test(model, data_loader):
+    model.eval()
+    predictions, true_labels = [], []
+
     with torch.no_grad():
         for batch in data_loader:
             input_ids = batch['input_ids']
             attention_mask = batch['attention_mask']
             labels = batch['labels']
-            texts = batch['text']
+
             outputs = model(input_ids, attention_mask=attention_mask)
             logits = outputs.logits
             batch_predictions = torch.argmax(logits, dim=1).tolist()
             predictions.extend(batch_predictions)
             true_labels.extend(labels.tolist())
 
-            # 誤分類されたサンプルを特定
-            for text, true_label, pred_label in zip(texts, labels, batch_predictions):
-                if true_label != pred_label:
-                    misclassified_samples.append((text, true_label, pred_label))
-
     accuracy = accuracy_score(true_labels, predictions)
     precision, recall, f1, _ = precision_recall_fscore_support(true_labels, predictions, average='binary')
-    return accuracy, precision, recall, f1, misclassified_samples
+    return accuracy, precision, recall, f1
 
-# 評価指標と誤分類されたサンプルの計算
-accuracy, precision, recall, f1, misclassified_samples = evaluate(model, val_loader)
-print(f'Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1 Score: {f1}')
-
-# 誤分類されたサンプルを表示
-print("\n誤分類されたサンプル:")
-for sample in misclassified_samples:
-    print(f'Text: {sample[0]}, True Label: {sample[1]}, Predicted Label: {sample[2]}')
-
+# モデルをテストデータセットで評価
+test_accuracy, test_precision, test_recall, test_f1 = evaluate_test(model, test_loader)
+print(f'Test - Accuracy: {test_accuracy:.3f}, Precision: {test_precision:.3f}, Recall: {test_recall:.3f}, F1 Score: {test_f1:.3f}')
