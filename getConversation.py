@@ -14,16 +14,17 @@ hostName = "localhost"
 port = 27017
 
 # db名称
-m_dbName = "皮肉です_5"
+m_dbName = "db名称"
 
 
 
 # To set your enviornment variables in your terminal run the following line:
 # export 'BEARER_TOKEN'='<your_bearer_token>'
-bearer_token = "AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAQFDtSh3lkw1KFnFpPwsCD8fQErk%3DITmT3yjQNKGxGuPidUowBPWr9L9kbRg6qW5dd1wWB82cZ6Pc8J"
+bearer_token = "<your_bearer_token>"
 
 
 def create_url(con_id, id):
+    # 目的のクエリを作る。詳しくは公式ドキュメントを参照。
     tweet_fields = "tweet.fields=author_id,in_reply_to_user_id,conversation_id,referenced_tweets"
     query = "query=conversation_id:{}".format(con_id)
     max_results = "max_results=100"
@@ -102,6 +103,7 @@ def main():
     db_db = db_client[m_dbName]
     # db_col = db_db[collection]
 
+    # 以下にconversation_idとidを二次元行列の形にしたstring型の配列を貼り付ける
     list = [
     [
         "1736200305061380482",

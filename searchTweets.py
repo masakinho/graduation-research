@@ -12,19 +12,19 @@ hostName = "localhost"
 port = 27017
 
 # db名称
-m_dbName = "TwitterDB2"
+m_dbName = "db名称"
 
 # collection名
-collection = "(皮肉ですzo)"
+collection = "collection名"
 
 # 発行したBearer tokenを指定する
-bearer_token = 'AAAAAAAAAAAAAAAAAAAAAMbTTQEAAAAAQFDtSh3lkw1KFnFpPwsCD8fQErk%3DITmT3yjQNKGxGuPidUowBPWr9L9kbRg6qW5dd1wWB82cZ6Pc8J'
+bearer_token = 'Bearer token'
 
 # Twitter APIのURL
 search_url = "https://api.twitter.com/2/tweets/search/recent"
 
 # 検索クエリ
-query_params = {'query': '("皮肉です")  -is:retweet -has:links ',  'max_results': 100, 'tweet.fields': 'conversation_id'}
+query_params = {'query': '("keyword")  -is:retweet -has:links ',  'max_results': 100, 'tweet.fields': 'conversation_id'}
 
 def create_headers(bearer_token):
     headers = {"Authorization": "Bearer {}".format(bearer_token)}
